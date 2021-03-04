@@ -1,0 +1,54 @@
+#### this file sets up the Chalk Cliffs data that were analyzed
+#### split into training and testing sets, then apply the likelihood-based algorithm
+rm(list=ls())
+
+library(dplyr)
+library(magrittr)
+library(fields)
+library(ggplot2)
+library(egg)
+source(paste0("functions.rigid.R"))
+
+
+csv.file <- read.csv(paste0(path, "rawdataCliffs.csv"))
+data1 <- dplyr::filter(csv.file, dataset=="D1")
+data2 <- dplyr::filter(csv.file, dataset=="D2")
+
+n1 <- dim(data1)[1]
+n2 <- dim(data2)[1]
+### split into train and test
+seed <- 4024
+set.seed(seed)
+smp <- list( call='floor(n/4)', train.num1=floor(n1/4),  n1=n1,
+             train.num2=floor(n2/4),  n2=n2)
+train.index1 <- sort( sample(1:n1, smp$train.num1 ) )
+train.index2 <- sort( sample(1:n2, smp$train.num2))
+d1train <- data1[train.index1, ]
+d1test <- data1[-train.index1, ]
+d2train <- data2[train.index2, ]
+d2test <- data2[-train.index2, ]
+#d2train <- data2
+### set flight factor
+d1train$pulseID <- 1
+d2train$pulseID <- 2
+d1train$pulseID <- as.factor(d1train$pulseID)
+d2train$pulseID <- as.factor(d2train$pulseID)
+
+### for checking the code
+d1train %<>% sample_n(size = 500)
+d2train %<>% sample_n(size = 500)
+
+
+### Final joint optimization for all parameters
+### after getting warm start initial guesses based on iterative optimization
+### for Matern and registration parameters
+
+(p <- log(c(0.831, 0.145, 0.0009)))
+(tr <-c(-0.35,0.505,-0.063,-0.0366))
+names(p) <- NULL; names(tr) <- NULL
+(allp.optim <- optim(par=c(p, tr), fn=logLik.translate.rotate2d.Matern.allp,
+                     nu=1, grd=d1train, grd2=d2train,
+                     method="L-BFGS-B", hessian=TRUE,
+                     lower=c(-Inf,-Inf,-Inf, -0.4, 0.45, -0.1, -pi/4),
+                     upper=c( Inf, Inf, Inf, -0.3, 0.55, 0.03, pi/4) ) )
+
