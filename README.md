@@ -26,3 +26,9 @@ And build the vignette using
 ``` r
 devtools::install_github("ashtonwiens/registration", build_vignettes=TRUE)
 ```
+
+To inspect, use
+
+``` r
+vignette('rigid-registration', package='registration')
+```
