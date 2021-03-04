@@ -1,4 +1,5 @@
-
+#' @importFrom magrittr %>%
+NULL
 
 #' Translate the x and y-coordinates in the first three columns
 #'
@@ -10,13 +11,20 @@
 #'
 #' @examples
 translate <- function(df, tr){
-  df %>% mutate( X = .[[1]]+tr[1], Y = .[[2]]+tr[2], Z = .[[3]]+tr[3] )
+  if(is.data.frame(df)){
+    df <- df %>% dplyr::mutate( X = .[[1]]+tr[1], Y = .[[2]]+tr[2], Z = .[[3]]+tr[3] )
+  }else{
+    df[,1] <- df[,1]+tr[1]
+    df[,2] <- df[,2]+tr[2]
+    df[,3] <- df[,3]+tr[3]
+  }
+  return(df)
 }
 
 #' Title
 #'
 #' @param df the dataframe with coordinates in first three columns
-#' @param tr a rotation angle in radians
+#' @param rt a rotation angle in radians
 #'
 #' @return the dataframe with rotated coordinates
 #' @export
@@ -24,8 +32,13 @@ translate <- function(df, tr){
 #' @examples
 rotate2d <- function(df, rt){
   phi <- rt
-  rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nr=2, nc=2 )
-  g <- t( rotat %*% t( data.matrix(df %>% dplyr::select(X,Y)) ) )
+  rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nrow=2, ncol=2 )
+  if(is.data.frame(df)){
+    dfs <- df %>% dplyr::select(X,Y)
+  }else{
+    dfs <- df[,1:2]
+  }
+  g <- t( rotat %*% t( data.matrix(dfs) ) )
   df[,1:2] <- g
   return(df)
 }
@@ -55,10 +68,10 @@ logLik.translate.rotate2d.Matern.allp <- function(p, nu, grd, grd2){
 
   y2 <- grd2[,3] + p[6]
   phi <- p[7]
-  rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nr=2, nc=2 )
+  rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nrow=2, ncol=2 )
   g2 <- t( rotat %*% t(cbind( grd2[,1] + p[4], grd2[,2] + p[5] )) )
-  d <- rdist(rbind(g,g2))
-  SS <- exp(p[2]) * Matern(d, range=exp(p[1]), smoothness=nu)
+  d <- fields::rdist(rbind(g,g2))
+  SS <- exp(p[2]) * fields::Matern(d, range=exp(p[1]), smoothness=nu)
   W <- exp(p[3]) * diag(dim(SS)[1])
   C <- SS + W
   #Q <- solve(C)

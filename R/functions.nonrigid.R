@@ -70,13 +70,13 @@
 #' plot.data.3d(gpnl.obj$data.list$data1)
 #' plot.data.3d(gpnl.obj$data.list$data2, add=TRUE, col='blue')
 #' plot.data.3d(gpnl.obj$data.list$data2.trf, add=TRUE, col='green')
-#' quilt.plot(total.change[,1:2], abs(gpnl.obj$fit.results$trnsf.That[,1]))
-#' quilt.plot(total.change[,1:2], abs(gpnl.obj$fit.results$trnsf.That[,2]))
-#' quilt.plot(total.change[,1:2], abs(gpnl.obj$fit.results$trnsf.That[,3]))
-#' quilt.plot(total.change[,1:2], abs(gpnl.obj$fit.results$trnsf.That[,4]))
+#' fields::quilt.plot(total.change[,1:2], abs(gpnl.obj$fit.results$trnsf.That[,1]))
+#' fields::quilt.plot(total.change[,1:2], abs(gpnl.obj$fit.results$trnsf.That[,2]))
+#' fields::quilt.plot(total.change[,1:2], abs(gpnl.obj$fit.results$trnsf.That[,3]))
+#' fields::quilt.plot(total.change[,1:2], abs(gpnl.obj$fit.results$trnsf.That[,4]))
 #' rs <- apply(gpnl.obj$fit.results$trnsf.That, 1, function(x){sum(abs(x))})
 #' total.change <- cbind(data2[,1:2], rs)
-#' quilt.plot(total.change[,1:2], total.change[,3])
+#' fields::quilt.plot(total.change[,1:2], total.change[,3])
 #' @export
 gpnlreg <- gp.nonrigid.registration <- nonrigid.registration <- function(pd1, pd2=NULL, setup.pars, est.pars){
   if(!is.data.frame(pd1) & !is.character(pd1)){
@@ -143,8 +143,8 @@ logLik.deformation.penalized <- function(p, nu, grd, grd2, lambda, int=NULL, kap
   phi <- p[7]
   rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nrow=2, ncol=2 )
   g2 <- t( rotat %*% t(cbind( grd2[,1] + p[4], grd2[,2] + p[5] )) )
-  d <- rdist(rbind(g,g2))
-  SS <- exp(p[2]) * Matern(d, range=exp(p[1]), smoothness=nu)
+  d <- fields::rdist(rbind(g,g2))
+  SS <- exp(p[2]) * fields::Matern(d, range=exp(p[1]), smoothness=nu)
   W <- exp(p[3]) * diag(dim(SS)[1])
   C <- SS + W
   #Q <- solve(C)
@@ -221,8 +221,8 @@ logLik.deformation.penalized.fixed <- function(p, nu, grd, grd2,
   phi <- 0 #p[7]
   rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nrow=2, ncol=2 )
   g2 <- t( rotat %*% t(cbind( grd2[,1] + p[1], grd2[,2] )) )
-  d <- rdist(rbind(g,g2))
-  SS <- fixed.p[2] * Matern(d, range=fixed.p[1], smoothness=nu)
+  d <- fields::rdist(rbind(g,g2))
+  SS <- fixed.p[2] * fields::Matern(d, range=fixed.p[1], smoothness=nu)
   W <- fixed.p[3] * diag(dim(SS)[1])
   C <- SS + W
   #Q <- solve(C)
@@ -276,8 +276,8 @@ logLikMatern <- function(p, nu, grd){
   y <- grd[,3]
   g <- data.matrix( grd[,1:2])
   names(g) <- NULL
-  d <- rdist(g)
-  SS <- exp(p[2]) * Matern(d, range=exp(p[1]), smoothness=nu)
+  d <- fields::rdist(g)
+  SS <- exp(p[2]) * fields::Matern(d, range=exp(p[1]), smoothness=nu)
   W <- exp(p[3]) * diag(dim(SS)[1])
   C <- SS + W
   #Q <- solve(C)
@@ -314,7 +314,7 @@ logLikMatern <- function(p, nu, grd){
 #' @param squeeze a positve real number which sets the inset of the outermost centroids
 #' @export
 split.data.overlap <- function(data1, data2, nx, ny, overlap=0.6, squeeze=10){
-  library(data.table)
+  #library(data.table)
   sx <- range(rbind(range(data1[,1]), range(data2[,1])))
   sy <- range(rbind(range(data1[,2]), range(data2[,2])))
   squeeze <- nx + 1
@@ -328,8 +328,8 @@ split.data.overlap <- function(data1, data2, nx, ny, overlap=0.6, squeeze=10){
   dx <- seq.x[2]-seq.x[1]
   dy <- seq.y[2]-seq.y[1]
   centroids <- expand.grid(seq.x, seq.y)
-  centroids <- mutate(centroids, grid=1:nrow(centroids), x=Var1, y=Var2, Var1=NULL, Var2=NULL)
-  centroids <- setDT(centroids)
+  centroids <- dplyr::mutate(centroids, grid=1:nrow(centroids), x=Var1, y=Var2, Var1=NULL, Var2=NULL)
+  centroids <- data.table::setDT(centroids)
   overlap.factor <- overlap #0.625 # 1/2 for no overlap, must be > 1/2 or else deficient (unused data)
   bounds <- centroids[, .(xl = x - (dx*overlap.factor), xu = x + (dx*overlap.factor)
                           , yl = y - (dy*overlap.factor), yu = y + (dy*overlap.factor)
@@ -339,10 +339,12 @@ split.data.overlap <- function(data1, data2, nx, ny, overlap=0.6, squeeze=10){
   data.size <- matrix(0, nrow=nrow(centroids), ncol=2)
   colnames(data1) <- colnames(data2) <- c('x','y','z')
   for(i in 1:nrow(bounds)){
-    D1_i[[i]] <- filter(data1, between(data1$x, bounds$xl[i], bounds$xu[i]), between(data1$y, bounds$yl[i], bounds$yu[i] )) # can also be bounds$grid[i]
-    D2_i[[i]] <- filter(data2, between(data2$x, bounds$xl[i], bounds$xu[i]), between(data2$y, bounds$yl[i], bounds$yu[i] ))
-    # D1_i[[i]] <- filter(data1, x >= bounds$xl[i], x <= bounds$xu[i],  y <= bounds$yu[i], y >= bounds$yl[i] ) # i can also be bounds$grid[i]
-    # D2_i[[i]] <- filter(data2, x >= bounds$xl[i], x <= bounds$xu[i],  y <= bounds$yu[i], y >= bounds$yl[i] )
+    D1_i[[i]] <- dplyr::filter(data1, data.table::between(data1$x, bounds$xl[i], bounds$xu[i]),
+                               data.table::between(data1$y, bounds$yl[i], bounds$yu[i] )) # can also be bounds$grid[i]
+    D2_i[[i]] <- dplyr::filter(data2, data.table::between(data2$x, bounds$xl[i], bounds$xu[i]),
+                               data.table::between(data2$y, bounds$yl[i], bounds$yu[i] ))
+    # D1_i[[i]] <- dplyr::filter(data1, x >= bounds$xl[i], x <= bounds$xu[i],  y <= bounds$yu[i], y >= bounds$yl[i] ) # i can also be bounds$grid[i]
+    # D2_i[[i]] <- dplyr::filter(data2, x >= bounds$xl[i], x <= bounds$xu[i],  y <= bounds$yu[i], y >= bounds$yl[i] )
     data.size[i,1] <- nrow(D1_i[[i]])
     data.size[i,2] <- nrow(D2_i[[i]])
   }
@@ -491,20 +493,20 @@ gpnlreg.krig.local.pars <- function(gpnl.obj){
   #wghts <- apply(ds, 1, mean)
   #condition <-  (ds[,1] > min.num.samples) & (ds[,2] > min.num.samples)
   #est.params.rf <- est.params[condition,]  #filter data sets by whether parameters were estimated
-  est.params.rf <- est.params[!near(est.params[,4],0),]  #filter data sets by whether parameters were estimated
+  est.params.rf <- est.params[!dplyr::near(est.params[,4],0),]  #filter data sets by whether parameters were estimated
   if(!is.matrix(est.params.rf)){
     est.params.rf <- matrix(est.params.rf, ncol=7)
   }
   #centroids.rf <- centroids[condition,1:2]
-  centroids.rf <- centroids[!near(est.params[,4],0),1:2]
+  centroids.rf <- centroids[!dplyr::near(est.params[,4],0),1:2]
   #wghts.rf <- wghts[condition]
   data2.prd.loc <- gpnl.obj$data.list$data2[,1:2]
-  #str(data2.prd.loc)
+  #utils::str(data2.prd.loc)
   # fit a Gaussian process to each spatial field independently
   GP.fit <- list()
   trnsf.That <- gpnl.obj$data.list$data2
   trnsf.SE <- gpnl.obj$data.list$data2
-  #str(trnsf.That)
+  #utils::str(trnsf.That)
   prd.seq <- seq(1,nrow(data2.prd.loc), by = 10000)
   if(length(prd.seq)==1){
     prd.seq <- c(1, nrow(data2.prd.loc))
@@ -525,16 +527,16 @@ gpnlreg.krig.local.pars <- function(gpnl.obj){
       # if( length(mdl.pars)>0 ){
       if(mdl.name == 'Tps'){
         print('Tps')
-        #str(data.matrix(centroids.rf))
-        #str(param.response)
-        GP.fit[[i-3]] <- mod <- Tps(x = data.matrix(centroids.rf), Y= param.response)
+        #utils::str(data.matrix(centroids.rf))
+        #utils::str(param.response)
+        GP.fit[[i-3]] <- mod <- fields::Tps(x = data.matrix(centroids.rf), Y= param.response)
         #GP.fit[[i-3]] <- mod <- do.call(mdl.name, c( x = data.matrix(centroids.rf), Y= param.response, mdl.pars))
         #          mKrig.args = list(m = 2))#, theta=10)
         #                                  theta=tht, lambda=lbd)
       }
       if(mdl.name == 'LatticeKrig'){
         print('LK')
-        GP.fit[[i-3]] <- mod <- LatticeKrig(x = data.matrix(centroids.rf), y= param.response)
+        GP.fit[[i-3]] <- mod <- LatticeKrig::LatticeKrig(x = data.matrix(centroids.rf), y= param.response)
         #          mKrig.args = list(m = 2))#, theta=10)
         #                                  theta=tht, lambda=lbd)
       }
@@ -559,11 +561,18 @@ gpnlreg.krig.local.pars <- function(gpnl.obj){
         }
         #print(k1)
         #print(k2)
-        #str(data2.prd.loc[k1:k2,])
-        #str(predict(mod, xnew = data.matrix(data2.prd.loc[k1:k2,]) ))
-        #str(trnsf.That[k1:k2,i-3])
-        trnsf.That[k1:k2,i-3] <- predict(mod, data2.prd.loc[k1:k2,] )
-        trnsf.SE[k1:k2,i-3] <- predictSE(mod,  data2.prd.loc[k1:k2,] )
+        #utils::str(data2.prd.loc[k1:k2,])
+        #utils::str(predict(mod, xnew = data.matrix(data2.prd.loc[k1:k2,]) ))
+        #utils::str(trnsf.That[k1:k2,i-3])
+        if(mdl.name == 'LatticeKrig'){
+          trnsf.That[k1:k2,i-3] <- LatticeKrig::predict.LKrig(mod, data2.prd.loc[k1:k2,] )
+          trnsf.SE[k1:k2,i-3] <- LatticeKrig::predictSE.LKrig(mod,  data2.prd.loc[k1:k2,] )
+        }
+        if(mdl.name == 'Tps'){
+          trnsf.That[k1:k2,i-3] <- fields::predict.Tps(mod, data2.prd.loc[k1:k2,] )
+          trnsf.SE[k1:k2,i-3] <- fields::predictSE(mod,  data2.prd.loc[k1:k2,] )
+        }
+
       }
       #trnsf.That[[i-3]] <- predict(mod, xnew = data2.prd.loc )
       #print(i)
@@ -608,14 +617,14 @@ gpnlreg.krig.cov.pars <- function(gpnl.obj){
   #wghts <- apply(ds, 1, mean)
   #condition <-  (ds[,1] > min.num.samples) & (ds[,2] > min.num.samples)
   #est.params.rf <- est.params[condition,]  #filter data sets by whether parameters were estimated
-  est.params.rf <- est.params[!near(est.params[,4],0),]#&
-  #!near(est.params[,1], 4)
+  est.params.rf <- est.params[!dplyr::near(est.params[,4],0),]#&
+  #!dplyr::near(est.params[,1], 4)
   #& est.params[,1]<=log(20),]  #filter data sets by whether parameters were estimated
   if(!is.matrix(est.params.rf)){
     est.params.rf <- matrix(est.params.rf, ncol=7)
   }
   #centroids.rf <- centroids[condition,1:2]
-  centroids.rf <- centroids[!near(est.params[,4],0),1:2] #& !near(est.params[,1],4)
+  centroids.rf <- centroids[!dplyr::near(est.params[,4],0),1:2] #& !dplyr::near(est.params[,1],4)
   #  & est.params[,1]<=log(20)
   #wghts.rf <- wghts[condition]
   data2.prd.loc <- gpnl.obj$data.list$d1cv[,1:2]
@@ -633,8 +642,8 @@ gpnlreg.krig.cov.pars <- function(gpnl.obj){
   fit.time <- system.time(
     for(i in 1:3){
       param.response <- est.params.rf[,i]
-      #print(str(param.response))
-      #print(str(data.matrix(centroids.rf)))
+      #print(utils::str(param.response))
+      #print(utils::str(data.matrix(centroids.rf)))
 
       # GP.fit[[i]] <- mod <- spatialProcess(x = data.matrix(centroids.rf), y = param.response, #, weights = wghts,
       #                                        mKrig.args = list(m=2), theta = gpnl.obj$est.pars$krig.theta ,
@@ -645,14 +654,14 @@ gpnlreg.krig.cov.pars <- function(gpnl.obj){
       # if( length(mdl.pars)>0 ){
       if(mdl.name == 'Tps'){
         print('Tps')
-        GP.fit[[i]] <- mod <- Tps(x = data.matrix(centroids.rf), Y= param.response)
+        GP.fit[[i]] <- mod <- fields::Tps(x = data.matrix(centroids.rf), Y= param.response)
         #GP.fit[[i-3]] <- mod <- do.call(mdl.name, c(x = data.matrix(centroids.rf), Y= param.response, mdl.pars))
         #          mKrig.args = list(m = 2))#, theta=10)
         #                                  theta=tht, lambda=lbd)
       }
       if(mdl.name == 'LatticeKrig'){
         print('LK')
-        GP.fit[[i]] <- mod <- LatticeKrig( x = data.matrix(centroids.rf), y= param.response)
+        GP.fit[[i]] <- mod <- LatticeKrig::LatticeKrig( x = data.matrix(centroids.rf), y= param.response)
         #          mKrig.args = list(m = 2))#, theta=10)
         #                                  theta=tht, lambda=lbd)
       }
@@ -669,10 +678,10 @@ gpnlreg.krig.cov.pars <- function(gpnl.obj){
         if(j == (length(prd.seq)-1)){
           k2 <- k2+1
         }
-        # str(trnsf.SE)
-        #str(trnsf.That)
-        str(predict(mod, data2.prd.loc[k1:k2,] ))
-        #str( data2.prd.loc[k1:k2,] )
+        # utils::str(trnsf.SE)
+        #utils::str(trnsf.That)
+        utils::str(predict(mod, data2.prd.loc[k1:k2,] ))
+        #utils::str( data2.prd.loc[k1:k2,] )
         #print(j)
         trnsf.That[k1:k2,i] <- predict(mod, data2.prd.loc[k1:k2,] ) #xnew=
         trnsf.SE[k1:k2,i] <- predictSE(mod, data2.prd.loc[k1:k2,] )
@@ -815,12 +824,12 @@ rigid.registration <- gp.rigid.registration <- function(data1, data2, est.pars, 
   y1 <- mean(d1i$y)
   z1 <- mean(d1i$z)
   cxyz <- c(x1,y1,z1)
-  d1i <- mutate(d1i, x=x-x1, y=y-y1, z=z-z1)
-  d2i <- mutate(d2i, x=x-x1, y=y-y1, z=z-z1)
+  d1i <- dplyr::mutate(d1i, x=x-x1, y=y-y1, z=z-z1)
+  d2i <- dplyr::mutate(d2i, x=x-x1, y=y-y1, z=z-z1)
   if(is.null(init)){
     init <- c(log(3), log(1), log(0.01), 0, 0, 0, 0)
   }
-  opt.res <- tryCatch(optim(par = init,
+  opt.res <- tryCatch(stats::optim(par = init,
                             fn=logLik.deformation.penalized,
                             grd=d1i[,1:3], grd2=d2i[,1:3],
                             nu=est.pars$smoothness, int=init,
@@ -860,14 +869,14 @@ parallel.fcn <- function(i, gpnl.obj){ ### doTask, for parallel and Rmpi package
     y1 <- mean(d1i$y)
     z1 <- mean(d1i$z)
     cxyz <- c(x1,y1,z1)
-    d1i <- mutate(d1i, x=x-x1, y=y-y1, z=z-z1)
-    d2i <- mutate(d2i, x=x-x1, y=y-y1, z=z-z1)
-    d1i <- sample_n(d1i, gpnl.obj$est.pars$n.subsamples)
-    d2i <- sample_n(d2i, gpnl.obj$est.pars$n.subsamples)
+    d1i <- dplyr::mutate(d1i, x=x-x1, y=y-y1, z=z-z1)
+    d2i <- dplyr::mutate(d2i, x=x-x1, y=y-y1, z=z-z1)
+    d1i <- dplyr::sample_n(d1i, gpnl.obj$est.pars$n.subsamples)
+    d2i <- dplyr::sample_n(d2i, gpnl.obj$est.pars$n.subsamples)
     if(gpnl.obj$est.pars$fixed==TRUE){
       print('fixed')
       init <- c(0)
-      time.opt <- system.time(opt.res <- tryCatch(optim(par = init,
+      time.opt <- system.time(opt.res <- tryCatch(stats::optim(par = init,
                                                         fn=logLik.deformation.penalized.fixed,
                                                         fixed.p=data.gend$param.list$gen.p[2:4],
                                                         grd=d1i[,1:3], grd2=d2i[,1:3],
@@ -886,7 +895,7 @@ parallel.fcn <- function(i, gpnl.obj){ ### doTask, for parallel and Rmpi package
       # init <- c(2.45049191710834, 1.49277821122548, -4.12095940249598,
       #            -1.01084936, -0.01962812, 0.22183046,0)
       #-0.875902411669938,  -0.0504028913352409, 0.205027609071423, -0.00227546051767845)
-      time.opt <- system.time(opt.res <- tryCatch(optim(par = init,
+      time.opt <- system.time(opt.res <- tryCatch(stats::optim(par = init,
                                                         fn=logLik.deformation.penalized,
                                                         grd=d1i[,1:3], grd2=d2i[,1:3],
                                                         nu=gpnl.obj$est.pars$smoothness,
@@ -945,7 +954,7 @@ rmpi.implementation <- function(gpnl.obj, est.pars){
   optim.times <- list()
   cxyz <- matrix(0, nrow=length(D1_i), ncol=3)
   for(i in 1:length(optim.results)){ # extract optimization results, result also contains timing
-    if( is(optim.results[[i]][[1]], 'list') ){
+    if( methods::is(optim.results[[i]][[1]], 'list') ){
       local.pars[[i]] <- optim.results[[i]][[1]]
       optim.times[[i]] <- optim.results[[i]][[2]]
       cxyz[i,] <- optim.results[[i]][[3]]
@@ -981,7 +990,7 @@ serial.implementation <- function(gpnl.obj, est.pars){
   optim.times <- list()
   cxyz <- matrix(0, nrow=length(D1_i), ncol=3)
   for(i in 1:length(optim.results)){ # extract optimization results, result also contains timing
-    if( is(optim.results[[i]][[1]], 'list') ){
+    if( methods::is(optim.results[[i]][[1]], 'list') ){
       local.pars[[i]] <- optim.results[[i]][[1]]
       optim.times[[i]] <- optim.results[[i]][[2]]
       cxyz[i,] <- optim.results[[i]][[3]]
@@ -1004,10 +1013,10 @@ serial.implementation <- function(gpnl.obj, est.pars){
 plot.data <- function(datalist.data, n.x=64, n.y=64,
                       add=FALSE, zlim=NULL){
   if(!is.null(zlim)){
-    quilt.plot(datalist.data[,1:2], datalist.data[,3],
+    fields::quilt.plot(datalist.data[,1:2], datalist.data[,3],
                nx=n.x, ny=n.y, add=add, zlim=zlim, xaxt='n', yaxt='n',)
   }else{
-    quilt.plot(datalist.data[,1:2], datalist.data[,3],
+    fields::quilt.plot(datalist.data[,1:2], datalist.data[,3],
                nx=n.x, ny=n.y, add=add, xaxt='n', yaxt='n',)
   }
 
@@ -1020,7 +1029,7 @@ plot.data <- function(datalist.data, n.x=64, n.y=64,
 #' @param col color of points
 #' @export
 plot.data.3d <- function(datalist.data, add=FALSE, col=1, cex=2){
-  plot3d(datalist.data[,1], datalist.data[,2], datalist.data[,3], add=add, col=col,
+  rgl::plot3d(datalist.data[,1], datalist.data[,2], datalist.data[,3], add=add, col=col,
          size=cex, xlab='', ylab='', zlab='')
 }
 
@@ -1035,8 +1044,8 @@ plot.data.subset <- function(gpnl.obj, window.i){
   i <- window.i
   d1i <- data.frame(gpnl.obj$data.subsets$D1_i[[i]])
   d2i <- data.frame(gpnl.obj$data.subsets$D2_i[[i]])
-  d1is <- sample_n(d1i, gpnl.obj$est.pars$n.subsamples)
-  d2is <- sample_n(d2i, gpnl.obj$est.pars$n.subsamples)
+  d1is <- dplyr::sample_n(d1i, gpnl.obj$est.pars$n.subsamples)
+  d2is <- dplyr::sample_n(d2i, gpnl.obj$est.pars$n.subsamples)
   plot3d(d1i[,1], d1i[,2], d1i[,3], col='black')
   plot3d(d2i[,1], d2i[,2], d2i[,3], col='grey', add=TRUE)
   plot3d(d1is[,1], d1is[,2], d1is[,3], col='blue', add=TRUE,  size=10)
@@ -1062,9 +1071,9 @@ plot.param <- function(gpnl.obj, param='x', zlim=NULL){ #'y', 'z', 'phi'
   if(param=='phi'){param<-4}
   n.x <- gpnl.obj$setup.pars$nxx
   n.y <- gpnl.obj$setup.pars$nyy
-  #par(mfrow=c(4,3), mar=c(2,2,1,1))
+  #graphics::par(mfrow=c(4,3), mar=c(2,2,1,1))
   if(!is.null(zlim)){
-    quilt.plot(centroids.rf[,1:2],
+    fields::quilt.plot(centroids.rf[,1:2],
                est.params.rf[,param+3],
                nx=n.x, ny=n.y, zlim=zlim,
               # xaxt='n',
@@ -1073,20 +1082,20 @@ plot.param <- function(gpnl.obj, param='x', zlim=NULL){ #'y', 'z', 'phi'
     # surface(GP.fit[[param]], xaxt='n', yaxt='n',
     #         xlab='', ylab='', zlim=zlim, type='I')
     pr <- predictSurface( GP.fit[[param]])
-    quilt.plot(expand.grid(pr$x, pr$y), pr$z,
+    fields::quilt.plot(expand.grid(pr$x, pr$y), pr$z,
                #xaxt='n',
                yaxt='n',
                xlab='', ylab='', zlim=zlim,# tck=seq(1,6,1),
                add.legend = FALSE)
 
   }else{
-    quilt.plot(centroids.rf[,1:2],
+    fields::quilt.plot(centroids.rf[,1:2],
                est.params.rf[,param+3],
                nx=n.x, ny=n.y)
     # surface(GP.fit[[param]], xaxt='n', yaxt='n',
     #         xlab='', ylab='', type='I')
     pr <- predictSurface( GP.fit[[param]])
-    quilt.plot(expand.grid(pr$x, pr$y), pr$z,
+    fields::quilt.plot(expand.grid(pr$x, pr$y), pr$z,
                xaxt='n', yaxt='n',
                xlab='', ylab='',
                add.legend = FALSE)
@@ -1108,18 +1117,18 @@ plot.windows.i <- function(gpnl.obj, windows.i){
   data1 <- gpnl.obj$data.list$data1
   data2 <- gpnl.obj$data.list$data2
   D1_i <- gpnl.obj$data.subsets$D1_i
-  par(mfrow=c(1,2), mar=c(2,2,1,1))
-  quilt.plot(data1[,1:2], data1[,3])
+  graphics::par(mfrow=c(1,2), mar=c(2,2,1,1))
+  fields::quilt.plot(data1[,1:2], data1[,3])
   for(j in 1:length(ii)){
     i <- ii[j]
     xl <- min(D1_i[[i]][,1]); xr <- max(D1_i[[i]][,1]); yb <- min(D1_i[[i]][,2]); yt <- max(D1_i[[i]][,2])
-    rect(xleft=xl, xright=xr, ytop = yb, ybottom=yt)
+    graphics::rect(xleft=xl, xright=xr, ytop = yb, ybottom=yt)
   }
-  quilt.plot(data2[,1:2], data2[,3])
+  fields::quilt.plot(data2[,1:2], data2[,3])
   for(j in 1:length(ii)){
     i <- ii[j]
     xl <- min(D1_i[[i]][,1]); xr <- max(D1_i[[i]][,1]); yb <- min(D1_i[[i]][,2]); yt <- max(D1_i[[i]][,2])
-    rect(xleft=xl, xright=xr, ytop = yb, ybottom=yt)
+    graphics::rect(xleft=xl, xright=xr, ytop = yb, ybottom=yt)
   }
 }
 
@@ -1134,7 +1143,7 @@ plot.windows.i <- function(gpnl.obj, windows.i){
 #' @return a translated data frame
 #' @export
 translate <- function(df, tr){
-  #df %>% mutate( X = .[[1]]+tr[1], Y = .[[2]]+tr[2], Z = .[[3]]+tr[3] )
+  #df %>% dplyr::mutate( X = .[[1]]+tr[1], Y = .[[2]]+tr[2], Z = .[[3]]+tr[3] )
   df[,1] <- df[,1] + tr[1]
   df[,2] <- df[,2] + tr[2]
   df[,3] <- df[,3] + tr[3]
@@ -1153,7 +1162,7 @@ translate <- function(df, tr){
 #' @export
 rotate2d <- function(df, rt){
   phi <- rt
-  rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nr=2, nc=2 )
+  rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nrow=2, ncol=2 )
   g <- t( rotat %*% t( data.matrix(df[,1:2] ) ) )
   df[,1:2] <- g
   return(df)
@@ -1177,15 +1186,15 @@ rotate3d <- function(df, rt){
   rotat_x <- matrix(c(1,0,0,
                       0,cos(phi_x), -sin(phi_x),
                       0, sin(phi_x), cos(phi_x)),
-                    nr=3, nc=3, byrow=TRUE )
+                    nrow=3, ncol=3, byrow=TRUE )
   rotat_y <- matrix(c(cos(phi_y),0,sin(phi_y),
                       0, 1, 0,
                       -sin(phi_y), 0, cos(phi_y)),
-                    nr=3, nc=3, byrow=TRUE )
+                    nrow=3, ncol=3, byrow=TRUE )
   rotat_z <- matrix(c(cos(phi_z), -sin(phi_z), 0,
                       sin(phi_z), cos(phi_z), 0,
                       0,0,1),
-                    nr=3, nc=3, byrow=TRUE )
+                    nrow=3, ncol=3, byrow=TRUE )
   gg <- data.frame(
     t( rotat_x %*% rotat_y %*% rotat_z %*%
          t( data.matrix( df[,1:3] ) ) )
@@ -1208,7 +1217,7 @@ rotate3d <- function(df, rt){
 #' or \code{'nonrigid'}, indicating the type of deregistration to be applie to the
 #' moving point set.
 #' @return a list with two data frames
-#' @example
+#' @examples
 #' library(dplyr)
 #' library(fields)
 #' library(data.table)
@@ -1252,28 +1261,28 @@ generate.data <- function(N=200, param.list=list(gen.p=c(1, 2, 1, 0.1), gen.p2=N
   thresh <- param.list$thresh
   param <- param.list$param
   if( is.null(p2) & is.null(theta) & is.null(beta) & is.null(thresh) ){warning('Need either dereg.p or theta to be a vector (not both NULL)')}
-  xy <- cbind(runif(N, 0, 6), runif(N, 0, 6))
-  d <- rdist(xy)
-  G <- p[3] * Matern(d, range = p[2], smoothness = p[1])
+  xy <- cbind(stats::runif(N, 0, 6), stats::runif(N, 0, 6))
+  d <- fields::rdist(xy)
+  G <- p[3] * fields::Matern(d, range = p[2], smoothness = p[1])
   C <- G + p[4] * diag(nrow(G))
-  z <- (C.c <- t(chol(C))) %*% (e <- rnorm(N) )
+  z <- (C.c <- t(chol(C))) %*% (e <- stats::rnorm(N) )
   if(!is.null(param.list$gen.p2)){
     ## extremely smooth but short scale and low variance process to add "rocks"
     gp2 <- param.list$gen.p2
-    G2 <- gp2[3] * Matern(d, range = gp2[2], smoothness = gp2[1])
+    G2 <- gp2[3] * fields::Matern(d, range = gp2[2], smoothness = gp2[1])
     C2 <- G2 + gp2[4] * diag(nrow(G2))
-    z2 <- (C.c2 <- t(chol(C2))) %*% (e <- rnorm(N) )
+    z2 <- (C.c2 <- t(chol(C2))) %*% (e <- stats::rnorm(N) )
     z <- z+z2
   }
   if(!is.null(param.list$gen.p3)){
     ## extremely smooth but short scale and low variance process to add "rocks"
     gp3 <- param.list$gen.p3
-    G3 <- gp3[3] * Matern(d, range = gp3[2], smoothness = gp3[1])
+    G3 <- gp3[3] * fields::Matern(d, range = gp3[2], smoothness = gp3[1])
     C3 <- G3 + gp3[4] * diag(nrow(G3))
-    z3 <- (C.c3 <- t(chol(C3))) %*% (e <- rnorm(N) )
+    z3 <- (C.c3 <- t(chol(C3))) %*% (e <- stats::rnorm(N) )
     z <- z+z3
   }
-  #quilt.plot(xy[,1], xy[,2], z)
+  #fields::quilt.plot(xy[,1], xy[,2], z)
   # source("~/Downloads/myColorRamp.R")
   # cols <- myColorRamp(tim.colors(alpha=0.75), values = z)
   # rgl::plot3d(cbind(xy,z), col=cols, box=FALSE, xlab='', ylab='', zlab='')
@@ -1286,14 +1295,14 @@ generate.data <- function(N=200, param.list=list(gen.p=c(1, 2, 1, 0.1), gen.p2=N
   # names(d1) <- c('X','Y','Z'); names(d2.b4) <- c('X','Y','Z')
 
   if(dereg.type=='rigid' & !is.null(theta)){
-    #(theta <- -runif(3, 0, 1) ) ### + c(0,0.3,0.3)
-    #(ang <- -runif(1, 0, pi/4)) ### + 0.5
+    #(theta <- -stats::runif(3, 0, 1) ) ### + c(0,0.3,0.3)
+    #(ang <- -stats::runif(1, 0, pi/4)) ### + 0.5
     d2 <- translate( rotate2d(d2.b4, theta[4] ) ,theta[1:3])
     return(list(d1=d1, d2=d2, d2.b4=d2.b4, param.list=param.list))
   }
   # d1$f <- 1; d2$f <- 2
-  # d1 <- cbind(runif(100), runif(100), runif(100))
-  # d2 <- d1 + matrix(rep((theta <- runif(3)), each=100), nrow=100)
+  # d1 <- cbind(stats::runif(100), stats::runif(100), stats::runif(100))
+  # d2 <- d1 + matrix(rep((theta <- stats::runif(3)), each=100), nrow=100)
   # d3 <- rbind(d1, d2); d3$f <- as.factor(d3$f)
   # p1 <- ggplot(d3) + geom_point(aes(X, Y, color=f))
   # p2 <- ggplot(d3) + geom_point(aes(X, Z, color=f))
@@ -1314,22 +1323,22 @@ generate.data <- function(N=200, param.list=list(gen.p=c(1, 2, 1, 0.1), gen.p2=N
   if(dereg.type=='nonrigid'){
     d2 <- d2.b4
     if(!is.null(p2)){
-      d <- rdist(d2.b4[,1:2])
-      G <- p2[3] * Matern(d, range = p2[2], smoothness = p2[1])
+      d <- fields::rdist(d2.b4[,1:2])
+      G <- p2[3] * fields::Matern(d, range = p2[2], smoothness = p2[1])
       C <- G + p2[4] * diag((N2 <- nrow(G)))
       C.c <- t(chol(C))
       if('x' %in% param){
-        tx <- C.c %*% (e <- rnorm(N2) )
+        tx <- C.c %*% (e <- stats::rnorm(N2) )
       }
       if('y' %in% param){
-        ty <- C.c %*% rnorm(N2)
+        ty <- C.c %*% stats::rnorm(N2)
       }
       if('z' %in% param){
-        tz <- C.c %*% rnorm(N2)
+        tz <- C.c %*% stats::rnorm(N2)
 
       }
       if('phi' %in% param){
-        tphi <- C.c %*% rnorm(N2)
+        tphi <- C.c %*% stats::rnorm(N2)
 
       }
     }
@@ -1399,7 +1408,7 @@ generate.data <- function(N=200, param.list=list(gen.p=c(1, 2, 1, 0.1), gen.p2=N
     }
 
     #tphi <- matrix(0, nrow=nrow(tphi), ncol=ncol(tphi))
-    par(mfrow=c(2,2))
+    graphics::par(mfrow=c(2,2))
     if(!exists('tx')){
       tx <- matrix(0, nrow=nrow(d2.b4) ,ncol=1)
     }
@@ -1415,10 +1424,10 @@ generate.data <- function(N=200, param.list=list(gen.p=c(1, 2, 1, 0.1), gen.p2=N
       tphi <- matrix(0, nrow=nrow(d2.b4) ,ncol=1)
 
     }
-    #quilt.plot(d2.b4[,1:2], tx )
-    #quilt.plot(d2.b4[,1:2], ty )
-    #quilt.plot(d2.b4[,1:2], tz )
-    #quilt.plot(d2.b4[,1:2], tphi )
+    #fields::quilt.plot(d2.b4[,1:2], tx )
+    #fields::quilt.plot(d2.b4[,1:2], ty )
+    #fields::quilt.plot(d2.b4[,1:2], tz )
+    #fields::quilt.plot(d2.b4[,1:2], tphi )
     trnsf.That <- cbind(c(tx), c(ty), c(tz), c(tphi))
     d2[,3] <- d2.b4[,3] + trnsf.That[,3] # z translation
     tmp.x <- d2.b4[,1] + trnsf.That[,1]
@@ -1497,7 +1506,7 @@ process.residuals <- function(d1, d2.obs, d2.true, d2.hat, data.gend,
     zlimx <- zlimy <- zlimz <- zlimphi <- zlim
   }
   if(plot==TRUE){
-    par(mfrow=c(4,3), mar=c(1,1,1,2), oma=c(1,1,1,1)  )
+    graphics::par(mfrow=c(4,3), mar=c(1,1,1,2), oma=c(1,1,1,1)  )
     plot.param(gpnl.obj, param='x', zlim=zlimx)
     #mtext('Estimates and TPS fit', adj=7)
     plot.data(target.x, zlim=zlimx)
@@ -1552,18 +1561,18 @@ local.krig.rigid <- function(data, x, pars){
   pred <- c()
   for(i in 1:nrow(x)){
     print(i)
-    #indx <- apply( rdist(x[i,], data[,1:2]), 1, function(x) order(x, decreasing=F) )[1:500,]
+    #indx <- apply( fields::rdist(x[i,], data[,1:2]), 1, function(x) order(x, decreasing=F) )[1:500,]
     #datatouse <- data[indx, ]
-    indx <- get.knnx( data=data.matrix(data[,1:2]), query=data.matrix(x[i,1:2]), k=100)
+    indx <- FNN::get.knnx( data=data.matrix(data[,1:2]), query=data.matrix(x[i,1:2]), k=100)
     indx <- indx$nn.index
     #indx <- sample(indx, 100)
     dind <- duplicated(data[indx, 1:2])
     datatouse <- data[indx, ]
     datatouse <- datatouse[!dind,]
-    d <- rdist(datatouse[,1:2])
-    G <- pp[2] * Matern(d, range=pp[1], smoothness = 1) + pp[3]*diag(nrow(d))
-    d0 <- rdist( x[i,], datatouse[,1:2])
-    G0 <- pp[2] * Matern(d0, range=pp[1], smoothness = 1)
+    d <- fields::rdist(datatouse[,1:2])
+    G <- pp[2] * fields::Matern(d, range=pp[1], smoothness = 1) + pp[3]*diag(nrow(d))
+    d0 <- fields::rdist( x[i,], datatouse[,1:2])
+    G0 <- pp[2] * fields::Matern(d0, range=pp[1], smoothness = 1)
     pred[i] <- G0 %*% chol2inv(chol(G)) %*% c(datatouse[,3])
   }
   return(pred)
@@ -1584,18 +1593,18 @@ local.krig.nonrigid <- function(data, x, pars){
   for(i in 1:nrow(x)){
     print(i)
     pp <- c(data.matrix(pars[i, ]))
-    #indx <- apply( rdist(x[i,], data[,1:2]), 1, function(x) order(x, decreasing=F) )[1:500,]
-    indx <- get.knnx( data=data.matrix(data[,1:2]), query=data.matrix(x[i,1:2]), k=1000)
+    #indx <- apply( fields::rdist(x[i,], data[,1:2]), 1, function(x) order(x, decreasing=F) )[1:500,]
+    indx <- FNN::get.knnx( data=data.matrix(data[,1:2]), query=data.matrix(x[i,1:2]), k=1000)
     print('Found NN')
     indx <- indx$nn.index
     #indx <- sample(indx, 10)
     dind <- duplicated(data[indx, 1:2])
     datatouse <- data[indx, ]
     datatouse <- datatouse[!dind,]
-    d <- rdist(datatouse[,1:2])
-    G <- pp[2] * Matern(d, range=pp[1], smoothness = 1) + pp[3]*diag(nrow(d))
-    d0 <- rdist(x[i,], datatouse[,1:2])
-    G0 <- pp[2] * Matern(d0, range=pp[1], smoothness = 1)
+    d <- fields::rdist(datatouse[,1:2])
+    G <- pp[2] * fields::Matern(d, range=pp[1], smoothness = 1) + pp[3]*diag(nrow(d))
+    d0 <- fields::rdist(x[i,], datatouse[,1:2])
+    G0 <- pp[2] * fields::Matern(d0, range=pp[1], smoothness = 1)
     pred[i] <- G0 %*% chol2inv(chol(G)) %*% c(datatouse[,3])
   }
   return(pred)
@@ -1605,14 +1614,14 @@ local.krig.nonrigid <- function(data, x, pars){
 #   pred <- c()
 #   for(i in 1:nrow(x)){
 #     print(i)
-#     indx1 <- apply( rdist(x[i,], centroids), 1, which.min)
+#     indx1 <- apply( fields::rdist(x[i,], centroids), 1, which.min)
 #     pp <- pars[indx1, ]
-#     indx <- apply( rdist(x[i,], data[,1:2]), 1, function(x) order(x, decreasing=F) )[1:500,]
+#     indx <- apply( fields::rdist(x[i,], data[,1:2]), 1, function(x) order(x, decreasing=F) )[1:500,]
 #     datatouse <- distinct(data[indx, ])
-#     d <- rdist(datatouse[,1:2])
-#     G <- pp[2] * Matern(d, range=pp[1], smoothness = 1) + pp[3]*diag(nrow(d))
-#     d0 <- rdist(x[i,], datatouse[,1:2])
-#     G0 <- pp[2] * Matern(d0, range=pp[1], smoothness = 1)
+#     d <- fields::rdist(datatouse[,1:2])
+#     G <- pp[2] * fields::Matern(d, range=pp[1], smoothness = 1) + pp[3]*diag(nrow(d))
+#     d0 <- fields::rdist(x[i,], datatouse[,1:2])
+#     G0 <- pp[2] * fields::Matern(d0, range=pp[1], smoothness = 1)
 #     pred[i] <- G0 %*% chol2inv(chol(G)) %*% c(datatouse[,3])
 #   }
 #   return(pred)
@@ -1631,24 +1640,24 @@ local.krig.nonrigid <- function(data, x, pars){
 #' @examples
 local.krig <- function(data, x, pars){ # pars is a list of data frames
   pred <- pred.var <- matrix(NA, nrow=nrow(x), ncol=length(pars))
-  indxtt <- get.knnx( data=data.matrix(data[,1:2]), query=data.matrix(x[,1:2]), k=1000)
+  indxtt <- FNN::get.knnx( data=data.matrix(data[,1:2]), query=data.matrix(x[,1:2]), k=1000)
   indxt <- indxtt$nn.index
   dists <- indxtt$nn.dist
   print('Found NN')
   for(i in 1:nrow(x)){
     print(i)
-    #indx <- apply( rdist(x[i,], data[,1:2]), 1, function(x) order(x, decreasing=F) )[1:500,]
+    #indx <- apply( fields::rdist(x[i,], data[,1:2]), 1, function(x) order(x, decreasing=F) )[1:500,]
     #indx <- sample(indx, 10)
     indx <- indxt[i,]
     #dind <- duplicated(data[indx, 1:2])
     datatouse <- data[indx, ]
     #datatouse <- datatouse[!dind,]
-    d <- rdist(datatouse[,1:2])
-    d0 <- dists[i,] #rdist(x[i,], datatouse[,1:2])
+    d <- fields::rdist(datatouse[,1:2])
+    d0 <- dists[i,] #fields::rdist(x[i,], datatouse[,1:2])
     for(j in 1:length(pars)){
       pp <- c(data.matrix(pars[[j]][i, ]))
-      G <- pp[2] * Matern(d, range=pp[1], smoothness = 1) + pp[3]*diag(nrow(d))
-      G0 <- pp[2] * Matern(d0, range=pp[1], smoothness = 1)
+      G <- pp[2] * fields::Matern(d, range=pp[1], smoothness = 1) + pp[3]*diag(nrow(d))
+      G0 <- pp[2] * fields::Matern(d0, range=pp[1], smoothness = 1)
       pred[i,j] <- G0 %*% (sig.inv <- chol2inv(chol(G))) %*% c(datatouse[,3])
       pred.var[i,j] <- pp[2] - t(G0) %*% sig.inv %*% G0
     }
@@ -1693,7 +1702,7 @@ crps.normal <- function(mu, sigma2, x){
   ### x is the actual realization that came to fruition
   s <- sqrt(sigma2)
   Z <- (x-mu)/s
-  score <- -s*( (1/sqrt(pi)) - 2*dnorm(Z) - Z*( 2*pnorm(Z)-1 ) )
+  score <- -s*( (1/sqrt(pi)) - 2*stats::dnorm(Z) - Z*( 2*stats::pnorm(Z)-1 ) )
   return(score)
 }
 

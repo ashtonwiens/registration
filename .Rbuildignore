@@ -1,2 +1,4 @@
 ^registration\.Rproj$
 ^\.Rproj\.user$
+^LICENSE\.md$
+^R/functions.nonrigid.R$
