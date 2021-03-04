@@ -1,5 +1,5 @@
 Package: registration
-Title: What the Package Does (One Line, Title Case)
+Title: Rigid and nonrigid registration using Gaussian process embedding
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Ashton",
@@ -7,7 +7,7 @@ Authors@R:
            role = c("aut", "cre"),
            email = "ashton.wiens@colorado.edu",
            comment = c(ORCID = "0000-0002-7030-0602"))
-Description: What the package does (one paragraph).
+Description: The package facilitates estimation of a Gaussian process using two misaligned point sets. The GP includes a registration.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

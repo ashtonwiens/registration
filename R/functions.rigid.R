@@ -1,4 +1,3 @@
-## rigid registrataion
 
 
 #' Translate the x and y-coordinates in the first three columns
@@ -14,6 +13,15 @@ translate <- function(df, tr){
   df %>% mutate( X = .[[1]]+tr[1], Y = .[[2]]+tr[2], Z = .[[3]]+tr[3] )
 }
 
+#' Title
+#'
+#' @param df the dataframe with coordinates in first three columns
+#' @param tr a rotation angle in radians
+#'
+#' @return the dataframe with rotated coordinates
+#' @export
+#'
+#' @examples
 rotate2d <- function(df, rt){
   phi <- rt
   rotat <- matrix(c(cos(phi), sin(phi), -sin(phi), cos(phi)), nr=2, nc=2 )
@@ -22,7 +30,19 @@ rotate2d <- function(df, rt){
   return(df)
 }
 
-### full likelihood function with embedded registration
+#' Log likelihood function with embedded registration
+#'
+#' Registration includes translations in the x, y, and z coordinates and a rotate in the xy plane
+#'
+#' @param p parameters defining Gaussian process covariance and registration
+#' @param nu smoothness parameter of GP
+#' @param grd three column matrix of point set 1
+#' @param grd2 three column matrix of point set 2
+#'
+#' @return the value of the negative log likelihood
+#' @export
+#'
+#' @examples
 logLik.translate.rotate2d.Matern.allp <- function(p, nu, grd, grd2){
   # p = c(theta, sigma2, tau2, ksi)
   # ksi = c( x, y, z, rotation_phi)

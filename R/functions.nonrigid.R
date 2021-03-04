@@ -192,6 +192,19 @@ logLik.deformation.penalized <- function(p, nu, grd, grd2, lambda, int=NULL, kap
   return(NLL)
 }
 
+#' Compute the log likelihood function, which may include a penalty term on the transformation parameters
+#'
+#' Used as the objective function in a call to \code{optim}
+#'
+#' @param p transformation parameters (x, y, z translations and 2d rotation) to be optimized over
+#' @param nu fixed smoothness parameter of the Matern covariance function
+#' @param grd three column data set 1
+#' @param grd2 three column data set 2
+#' @param lambda multiplicative tuning parameter in the penalty term
+#' @param pen.type type of penalty term to apply ('L1', 'L2', 'elastic', or 'none')
+#' @param fixed.p covariance parameters (range, sill and nugget variances), fixed not estimated
+#' @return the value of the penalized likelihood function
+#' @export
 logLik.deformation.penalized.fixed <- function(p, nu, grd, grd2,
                                                lambda, pen.type='L2',
                                                fixed.p ){ # range sill nugget
@@ -245,6 +258,15 @@ logLik.deformation.penalized.fixed <- function(p, nu, grd, grd2,
   return(NLL)
 }
 
+#' Compute the log likelihood function for a Gaussian process with Matern covariance
+#'
+#' Used as the objective function in a call to \code{optim}
+#'
+#' @param p covariance parameters (range, sill and nugget variances) to be optimized over
+#' @param nu fixed smoothness parameter of the Matern covariance function
+#' @param grd three column data set
+#' @return the value of the negative log likelihood function
+#' @export
 logLikMatern <- function(p, nu, grd){
   # p = c(theta, sigma2, tau2, ksi)
   # ksi = c( x, y, z, rotation_phi)
@@ -557,6 +579,18 @@ gpnlreg.krig.local.pars <- function(gpnl.obj){
 }
 
 
+#' Takes locally estimated covariance parameters and fits surface models independently
+#'
+#' \code{gpnlreg.krig.cov.pars} takes a gpnl.obj with est.results, and fits a spatial model to each
+#' covariance parameter independently using a Gaussian process or an approximate thin plate spline.
+#' Then, using these surfaces models, the transformation parameters are predicted at the observation locations
+#' of the moving data set (\code{data2}). \code{gpnl.obj$fit.results} contains the fitted models and the
+#' predicted covariance parameters.
+#'
+#' @param gpnl.obj a gpnl.obj containing data.subsets, est.pars, and est.results components
+#' @return a gpnl.obj containing an fit.results component
+#' @seealso \code{\link{spatialProcess}} \code{\link{Tps}}
+#' @export
 gpnlreg.krig.cov.pars <- function(gpnl.obj){
   D1_i <- gpnl.obj$data.subsets$D1_i
   D2_i <- gpnl.obj$data.subsets$D2_i
@@ -1483,6 +1517,17 @@ process.residuals <- function(d1, d2.obs, d2.true, d2.hat, data.gend,
 
 }
 
+#' Plots fitted vs true registration
+#'
+#' @param d1 x, y, z coordinates of data set 1
+#' @param d2.obs x, y, z coordinates of data set 2, pre-registration
+#' @param d2.true x, y, z coordinates of data set 2, the true target alignment
+#' @param d2.hat x, y, z coordinates of data set 2, post-registration
+#'
+#' @return plots
+#' @export
+#'
+#' @examples
 plot.fitted.vs.truth <- function(d1, d2.obs, d2.true, d2.hat){
   plot.data.3d(d2.true, cex=3)
   plot.data.3d(d2.hat, add=TRUE, col='blue', cex=4)
@@ -1492,7 +1537,16 @@ plot.fitted.vs.truth <- function(d1, d2.obs, d2.true, d2.hat){
 
 
 
-###### local krig
+#' Perform local kriging using 1000 nearest neighbors using covariance parameters in pars
+#'
+#' @param data available data
+#' @param x locations at which to predict
+#' @param pars list of data frames with covariance parameters
+#'
+#' @return the predicted surface and prediction variances
+#' @export
+#'
+#' @examples
 local.krig.rigid <- function(data, x, pars){
   pp <- pars
   pred <- c()
@@ -1515,6 +1569,16 @@ local.krig.rigid <- function(data, x, pars){
   return(pred)
 }
 
+#' Perform local kriging using 1000 nearest neighbors using covariance parameters in pars
+#'
+#' @param data available data
+#' @param x locations at which to predict
+#' @param pars list of data frames with covariance parameters
+#'
+#' @return the predicted surface and prediction variances
+#' @export
+#'
+#' @examples
 local.krig.nonrigid <- function(data, x, pars){
   pred <- c()
   for(i in 1:nrow(x)){
@@ -1555,6 +1619,16 @@ local.krig.nonrigid <- function(data, x, pars){
 # }
 
 
+#' Perform local kriging using 1000 nearest neighbors using covariance parameters in pars
+#'
+#' @param data available data
+#' @param x locations at which to predict
+#' @param pars list of data frames with covariance parameters
+#'
+#' @return the predicted surface and prediction variances
+#' @export
+#'
+#' @examples
 local.krig <- function(data, x, pars){ # pars is a list of data frames
   pred <- pred.var <- matrix(NA, nrow=nrow(x), ncol=length(pars))
   indxtt <- get.knnx( data=data.matrix(data[,1:2]), query=data.matrix(x[,1:2]), k=1000)
@@ -1583,6 +1657,16 @@ local.krig <- function(data, x, pars){ # pars is a list of data frames
 }
 
 
+#' Calculate log score for normal distribution
+#'
+#' @param mu mean of normal distribution
+#' @param sigma2 variance of normal distribution
+#' @param x realization from process
+#'
+#' @return the log score
+#' @export
+#'
+#' @examples
 log.score <- function(mu, sigma2, x){
   # p = c(theta, sigma2, tau2)
   #cat(p[1], ', ', p[2], ', ', p[3], p[4], p[5], p[6], p[7] )
@@ -1593,6 +1677,16 @@ log.score <- function(mu, sigma2, x){
 }
 
 
+#' Calculate crps score for normal distribution
+#'
+#' @param mu mean of normal distribution
+#' @param sigma2 variance of normal distribution
+#' @param x realization from process
+#'
+#' @return the crps score
+#' @export
+#'
+#' @examples
 crps.normal <- function(mu, sigma2, x){
   ### mu, sigma2, and x are vectors of equal length
   ### mu and sigma2 are the mean and variance of the normal predictive distribution
@@ -1603,6 +1697,16 @@ crps.normal <- function(mu, sigma2, x){
   return(score)
 }
 
+#' Calculate crps score
+#'
+#' @param X1 matrix with ncol independent realizations of the random vector X
+#' @param X2 matrix with another ncol independent realizations of the random vector X
+#' @param x the actual realization that came to fruition
+#'
+#' @return the crps score
+#' @export
+#'
+#' @examples
 crps <- function(X1, X2, x){
   # X1 and X2 are matrices with ncol independent realizations of the random vector X
   # the number of rows of X1 and X2 is equal to the number of spatial locations
