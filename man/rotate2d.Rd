@@ -2,7 +2,7 @@
 % Please edit documentation in R/functions.rigid.R
 \name{rotate2d}
 \alias{rotate2d}
-\title{Title}
+\title{rotate xy coordinates}
 \usage{
 rotate2d(df, rt)
 }
@@ -15,5 +15,5 @@ rotate2d(df, rt)
 the dataframe with rotated coordinates
 }
 \description{
-Title
+rotate xy coordinates
 }

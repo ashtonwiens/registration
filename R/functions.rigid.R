@@ -21,7 +21,7 @@ translate <- function(df, tr){
   return(df)
 }
 
-#' Title
+#' rotate xy coordinates
 #'
 #' @param df the dataframe with coordinates in first three columns
 #' @param rt a rotation angle in radians
@@ -56,7 +56,7 @@ rotate2d <- function(df, rt){
 #' @export
 #'
 #' @examples
-logLik.translate.rotate2d.Matern.allp <- function(p, nu, grd, grd2){
+reg.logLik.translate.rotate2d.Matern.allp <- function(p, nu, grd, grd2){
   # p = c(theta, sigma2, tau2, ksi)
   # ksi = c( x, y, z, rotation_phi)
   #cat(ksi[1], ', ', ksi[2], ', ', ksi[3], ', ', ksi[4])

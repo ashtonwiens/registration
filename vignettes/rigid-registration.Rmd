@@ -60,7 +60,7 @@ d2train %<>% dplyr::sample_n(size = 200)
 (p <- log(c(0.831, 0.145, 0.0009)))
 (tr <-c(-0.35,0.505,-0.063,-0.0366))
 names(p) <- NULL; names(tr) <- NULL
-(allp.optim <- stats::optim(par=c(p, tr), fn=logLik.translate.rotate2d.Matern.allp,
+(allp.optim <- stats::optim(par=c(p, tr), fn=reg.logLik.translate.rotate2d.Matern.allp,
                      nu=1, grd=d1train, grd2=d2train,
                      method="L-BFGS-B", hessian=TRUE,
                      lower=c(-Inf,-Inf,-Inf, -0.4, 0.45, -0.1, -pi/4),
